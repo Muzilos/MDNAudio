@@ -63,16 +63,6 @@
   myFrequencyArray[4] = 5000;
   const magResponseOutput = new Float32Array(5);
   const phaseResponseOutput = new Float32Array(5);
-  let audioCtx = new AudioContext();
-
-  let analyserNode;
-  let javascriptNode;
-  let sourceNode;
-  let audioPlaying = false;
-  let sampleSize = 1024;
-  let amplitudeArray;
-  let canvasWidth  = 512;
-  let canvasHeight = 256;
 
   // Hacks to deal with different function names in different browsers
   window.requestAnimFrame = (function(){
@@ -91,6 +81,20 @@
       console.log('getUserMedia supported.');
       navigator.mediaDevices.getUserMedia ({audio: true, video: false})
       .then(function(stream) {
+          const audioCtx = new AudioContext();
+
+          let analyserNode;
+          let javascriptNode;
+          let sourceNode;
+          let audioPlaying = false;
+          let sampleSize = 2048;
+          let amplitudeArray;
+          let canvasWidth  = 512;
+          let canvasHeight = 256;
+
+          let ctx;
+          ctx = document.querySelector('#canvas').getContext('2d');
+      
           // Create a MediaStreamAudioSourceNode
           // Feed the HTMLMediaElement into it
           const source = audioCtx.createMediaStreamSource(stream);
@@ -108,6 +112,7 @@
           // then set new gain value
           range.oninput = function() {
               biquadFilter.gain.value = range.value;
+              console.log(amplitudeArray)
           }
           function calcFrequencyResponse() {
               biquadFilter.getFrequencyResponse(myFrequencyArray,magResponseOutput,phaseResponseOutput);
@@ -118,47 +123,56 @@
               }
           }
           calcFrequencyResponse();
-          document.querySelector('#start_button').addEventListener('click', async function(e) {
-            // Set up the audio Analyser, the Source Buffer and javascriptNode
-            setupAudioNodes();
-            // setup the event handler that is triggered every time enough samples have been collected
-            // trigger the audio analysis and draw the results
-            javascriptNode.onaudioprocess = function () {
-                // get the Time Domain data for this sample
-                analyserNode.getByteTimeDomainData(amplitudeArray);
-                // draw the display if the audio is playing
-                if (audioPlaying == true) {
-                    requestAnimFrame(drawTimeDomain);
-                }
-            }
+
+        document.querySelector('#start_button').addEventListener('click', function(e) {
+          e.preventDefault();
+          audioPlaying = true;
+          // Set up the audio Analyser, the Source Buffer and javascriptNode
+          setupAudioNodes();
+          // setup the event handler that is triggered every time enough samples have been collected
+          // trigger the audio analysis and draw the results
+          javascriptNode.onaudioprocess = function () {
+              // get the Time Domain data for this sample
+              analyserNode.getByteTimeDomainData(amplitudeArray);
+              // draw the display if the audio is playing
+              if (audioPlaying == true) {
+                  console.log(audioPlaying)
+                  requestAnimFrame(drawTimeDomain);
+              }
+          }
         });
       
         // Stop the audio playing
         document.querySelector('#stop_button').addEventListener('click', function(e) {
             e.preventDefault();
             audioPlaying = false;
+            console.log(audioPlaying)
         });
 
-        async function drawTimeDomain() {
+        function drawTimeDomain() {
           clearCanvas();
           for (let i = 0; i < amplitudeArray.length; i++) {
-              console.log(amplitudeArray[i])
+              // console.log(amplitudeArray[i])
               let value = amplitudeArray[i] / 256;
               let y = canvasHeight - (canvasHeight * value) - 1;
               ctx.fillStyle = '#ffffff';
               ctx.fillRect(i, y, 1, 1);
           }
         }
+        function clearCanvas() {
+          ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+        }
+      
     
         function setupAudioNodes() {
-          sourceNode     = audioCtx.createBufferSource();
+          // sourceNode     = audioCtx.createBufferSource();
           analyserNode   = audioCtx.createAnalyser();
-          javascriptNode = audioCtx.createScriptProcessor(256, 1, 1);
+          javascriptNode = audioCtx.createScriptProcessor(sampleSize, 1, 1);
           // Create the array for the data values
           amplitudeArray = new Uint8Array(analyserNode.frequencyBinCount);
           // Now connect the nodes together
-          sourceNode.connect(audioCtx.destination);
-          sourceNode.connect(analyserNode);
+          // sourceNode.connect(audioCtx.destination);
+          biquadFilter.connect(analyserNode);
           analyserNode.connect(javascriptNode);
           javascriptNode.connect(audioCtx.destination);
         }
@@ -173,9 +187,6 @@
       console.log('getUserMedia not supported on your browser!');
   }
   
-  function clearCanvas() {
-    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-  }
   // dump script to pre element
   // pre.innerHTML = myScript.innerHTML;
 </script>
