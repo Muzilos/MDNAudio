@@ -25,8 +25,10 @@ window.requestAnimFrame = (function () {
 })();
 
 // Display gain value
-gainval.innerHTML = 'Gain: ' + '<strong>' + range.value + '<strong>'
-
+updateGainDisplay()
+function updateGainDisplay() {
+  gainval.innerHTML = 'Gain: ' + '<strong>' + range.value + '<strong>';
+}
 // getUserMedia block - grab stream
 // put it into a MediaStreamAudioSourceNode
 // also output the visuals into a video element
@@ -68,7 +70,7 @@ if (navigator.mediaDevices) {
       // then set new gain value
       range.oninput = function () {
         biquadFilter.gain.value = range.value;
-        gainval.innerHTML = 'Gain: ' + '<strong>' + range.value + '<strong>'
+        updateGainDisplay();
       }
 
       function calcFrequencyResponse() {
@@ -84,6 +86,7 @@ if (navigator.mediaDevices) {
       document.querySelector('#start_button').addEventListener('click', function (e) {
         e.preventDefault();
         audioPlaying = true;
+        console.log(audioPlaying)
         // Set up the audio Analyser, the Source Buffer and javascriptNode
         setupAudioNodes();
         // setup the event handler that is triggered every time enough samples have been collected
@@ -93,7 +96,6 @@ if (navigator.mediaDevices) {
           analyserNode.getByteTimeDomainData(amplitudeArray);
           // draw the display if the audio is playing
           if (audioPlaying == true) {
-            console.log(audioPlaying)
             requestAnimFrame(drawTimeDomain);
           }
         }
@@ -120,7 +122,6 @@ if (navigator.mediaDevices) {
       function clearCanvas() {
         ctx.clearRect(0, 0, canvasWidth, canvasHeight);
       }
-
 
       function setupAudioNodes() {
         // sourceNode     = audioCtx.createBufferSource();
